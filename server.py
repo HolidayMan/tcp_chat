@@ -15,9 +15,9 @@ def recieving(connection, address, username):
 	while True:
 		mess = connection.recv(1024).decode('utf-8')
 		try:
-			if mess.split()[1] == 'disconnected':
-				send_to_everybody(mess, address, 'Server')
-				print('\b'*4, mess+'\n>>> ', sep='', end='')
+			if mess == '/disconnect':
+				send_to_everybody('{} disconnected'.format(username), address, 'Server')
+				print('\b'*4, '{} disconnected'.format(username)+'\n>>> ', sep='', end='')
 				del clients[clients.index((connection, address, username))]
 				connection.close()
 				break
@@ -36,13 +36,13 @@ def acc():
 		username = conn.recv(1024).decode('utf-8')
 		mess = '{} connected\n>>> '.format(username)
 		print('\b'*4, mess, sep='', end='')
-		send_to_everybody(mess, addr, 'Server')
+		send_to_everybody('{} connected'.format(username), addr, 'Server')
 		clients.append((conn, addr, username))
 		threading.Thread(target=recieving, args=(conn, addr, username), daemon=True).start()
 
 clients = []
 
-ip = socket.gethostbyname((socket.gethostname()))
+ip = '192.168.0.107' #socket.gethostbyname((socket.gethostname()))
 if len(sys.argv) == 2:
 	port = int(sys.argv[1])
 else:
