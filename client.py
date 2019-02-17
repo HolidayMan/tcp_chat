@@ -4,40 +4,42 @@ import sys
 import time
 
 def gettime():
+    """gets and unpacks time"""
     return time.strftime("%Y-%m-%d-%H.%M.%S", time.localtime())
 
 def sendmessage():
-    global sock
+    """checks if your message is empty and sends it to server"""
     while True:
         message = input('You: ')
         if message in '\n ':
             continue
-        sock.sendall(message.encode('utf-8'))
+        SOCK.sendall(message.encode('utf-8'))
 
 if len(sys.argv) != 2:
     print('[!] Incorrect use. Correct use is "python3 file.py ip:port"')
 else:
     try:
-        ip = sys.argv[1].split(':')[0]
-        port = int(sys.argv[1].split(':')[1])
+        IP = sys.argv[1].split(':')[0]
+        PORT = int(sys.argv[1].split(':')[1])
     except SyntaxError:
         print('[!] Incorrect use. Correct use is "python3 file.py ip:port"')
 try:
-    sock = socket.socket()
+    SOCK = socket.socket()
     while True:
-        username = input('Username: ')
-        if ''.join(username.split()) in '\n ':
+        USERNAME = input('Username: ')
+        if ''.join(USERNAME.split()) in '\n ':
             continue
         else:
-            username = username.encode('utf-8')
+            USERNAME = USERNAME.encode('utf-8')
             break
-    sock.connect((ip, port))
-    sock.sendall(username)
-    howmuch = input('Number of last messages: ').encode('utf-8')
+    HOWMUCH = input('Number of last messages: ').encode('utf-8')
+    SOCK.connect((IP, PORT))
+    SOCK.sendall(USERNAME)
+    time.sleep(0.5)
+    SOCK.sendall(HOWMUCH)
     print()
-    sock.sendall(howmuch)
-    history = sock.recv(2048).decode('utf-8')
-    print(history, end='')
+    HISTORY = SOCK.recv(2048).decode('utf-8')
+    print(HISTORY, end='')
     print('You connected [{}]'.format(gettime()))
     threading.Thread(target=sendmessage, daemon=True).start()
 except ConnectionRefusedError:
@@ -46,20 +48,20 @@ except ConnectionRefusedError:
 while True:
     try:
         try:
-            message = sock.recv(1024).decode('utf-8')
+            MESSAGE = SOCK.recv(1024).decode('utf-8')
         except OSError:
-            sock.close()
+            SOCK.close()
             break
-        if message == '/turnoff':
+        if MESSAGE == '/turnoff':
             print('\b'*5, 'Server turned off')
             break
-        elif message == '/disconnect':
+        elif MESSAGE == '/disconnect':
             break
-        elif message == '/kick':
+        elif MESSAGE == '/kick':
             print('\b'*5, 'You was kicked')
             break
-        print('\b'*5, '{}\nYou: '.format(message), sep='', end='')
+        print('\b'*5, '{}\nYou: '.format(MESSAGE), sep='', end='')
     except KeyboardInterrupt:
-        sock.sendall('/disconnect'.encode('utf-8'))
+        SOCK.sendall('/disconnect'.encode('utf-8'))
         break
-sock.close()
+SOCK.close()
