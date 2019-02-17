@@ -37,9 +37,13 @@ while True:
 			message = sock.recv(1024).decode('utf-8')
 		except OSError:
 			break
-		print('\b'*5, '{}\nYou: '.format(message), sep='', end='')
-		if message == 'Server turned off':
+		if message == '/disconnect':
+			print('\b'*5, 'Server turned off')
 			break
+		elif message == '/kick':
+			print('\b'*5, 'You was kicked')
+			break
+		print('\b'*5, '{}\nYou: '.format(message), sep='', end='')
 	except:
 		sock.sendall('/disconnect'.encode('utf-8'))
 		break
