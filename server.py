@@ -13,6 +13,35 @@ def writemess(mess):
 	with open('log.txt', 'a') as f:
 		f.write(mess)
 
+
+def send_history(conn, num):
+	with open('log.txt', 'r') as f:
+		messages = f.readlines()
+	if ''.join(num.split()) == 'all':
+		mess = ''
+		for i in messages:
+			mess+=i
+		conn.send(mess.encode('utf-8'))
+	else:
+		try:
+			num = int(num)
+		except ValueError:
+			conn.send('It must be a positive number or "all"'.encode('utf-8'))
+			return 0
+		if num > len(messages):
+			mess = ''
+			for i in messages:
+				mess+=i
+				print(messages)
+			conn.send(mess.encode('utf-8'))
+		elif num > 0:
+			messages = messages[::-1][:num][::-1]
+			mess = ''
+			for i in messages:
+				mess+=i
+			conn.send(mess.encode('utf-8'))
+
+
 def getip():
 	import http.client
 	conn = http.client.HTTPConnection("ifconfig.me")
@@ -31,6 +60,7 @@ def send_to_everybody(mess, addr, user):
 
 
 def recieving(connection, address, username):
+	global clients
 	while True:
 		try:
 			mess = connection.recv(1024).decode('utf-8')
@@ -39,9 +69,13 @@ def recieving(connection, address, username):
 		try:
 			if mess == '/disconnect':
 				send_to_everybody('{} disconnected'.format(username), address, 'Server')
+				connection.send('/disconnect'.encode('utf-8'))
 				print('\b'*4, '{} disconnected [{}]'.format(username, gettime())+'\n>>> ', sep='', end='')
 				del clients[clients.index((connection, address, username))]
-				connection.close()
+				for i in clients:
+					if i[0] == connection:
+						i[0].close()
+						break
 				break
 		except IndexError:
 			pass
@@ -56,7 +90,9 @@ def acc():
 	while True:
 		conn, addr = sock.accept()
 		username = conn.recv(1024).decode('utf-8')
-		mess = '{} connected\n>>> '.format(username)
+		howmuch = conn.recv(1024).decode('utf-8')
+		send_history(conn, howmuch)
+		mess = '{} connected [{}]\n>>> '.format(username, gettime())
 		print('\b'*4, mess, sep='', end='')
 		send_to_everybody('{} connected'.format(username), addr, 'Server')
 		clients.append((conn, addr, username))
@@ -90,7 +126,7 @@ if __name__ == "__main__":
 			if com == 'exit':
 				print('[*] Stopping server')
 				for i in clients:
-					i[0].send('/disconnect'.encode('utf-8'))
+					i[0].send('/turnoff'.encode('utf-8'))
 					i[0].close()
 				writemess('{}[{}]: {}\n'.format('Server', gettime(), 'Server turned off'))
 				sock.close()
