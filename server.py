@@ -79,7 +79,6 @@ def recieving(connection, address, username):
 				break
 		except IndexError:
 			pass
-		print('new mess')
 		send_to_everybody(mess, address, username)
 
 
