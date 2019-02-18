@@ -5,7 +5,7 @@ import time
 
 def gettime():
     """gets and unpacks time"""
-    return time.strftime("%Y-%m-%d-%H.%M.%S", time.localtime())
+    return time.strftime("%d.%m.%Y-%H:%M:%S", time.localtime())
 
 def sendmessage():
     """checks if your message is empty and sends it to server"""
