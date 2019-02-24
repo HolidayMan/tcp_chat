@@ -3,9 +3,8 @@ import functions
 commands = ['sclients', 'slogs']
 
 def do_command(command, clients):
-  command = command.split()
   if command[0] not in commands:
-    print('server: command', command, 'not found')
+    print('server: command', command[0], 'not found')
     return 0
   if command[0] == 'sclients':
     showclients(clients)

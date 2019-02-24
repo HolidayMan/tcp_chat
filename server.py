@@ -6,6 +6,8 @@ import configparser
 
 import functions
 import commands
+
+
 class TCPServer:
 
   def __init__(self, ip, port):
@@ -21,19 +23,71 @@ class TCPServer:
     for i in self.clients:
       if i[1][1] == addr:
         continue
-      i[0].send('[{}] {}({}): {}'.format(functions.gettime(), username, addr, mess).encode('utf-8'))
+      try:
+        i[0].send('[{}] {}({}): {}'.format(functions.gettime(), username, addr, mess).encode('utf-8'))
+      except OSError:
+        del self.clients[self.clients.index((conn, addr, username))]
 
+
+  def kick(self, command):
+    if len(command)>1:
+      address = command[1]
+      try:
+        address = int(address)
+
+      except ValueError:
+        print('kick: address must be a number')
+        return 0
+
+      for i in self.clients:
+          if i[1][1] == address:
+            i[0].send('Server: you was kicked'.encode('utf-8'))
+            i[0].close()
+            del self.clients[self.clients.index(i)]
+            print('{} was kicked'.format(i[2]))
+            functions.writemess('[{}] Server: {} ({}) was kicked'.format(functions.gettime(), i[2], i[1][1]))
+            break
+
+      else:
+        print('kick: user not found')
+
+    else:
+      print('kick: Incorrect use. Specify the address. Type "sclients" to see connected users.')
 
   def receiving(self, conn, addr, username):
+    empty_message_count = 0 
     while True:
       try:
         mess = conn.recv(1024).decode('utf-8')
       except OSError:
-        del self.clients[self.clients.index((conn, addr, username))]
-      self.send_message_to_everybody(mess, addr[1], username)
-      functions.writemess('[{}] {}({}): {}'.format(functions.gettime(), username, addr, mess))
+        try:
+          del self.clients[self.clients.index((conn, addr, username))]
+        except ValueError:
+          break
+        functions.writemess('[{}] {}: {}({}) {}'.format(functions.gettime(), 'Server', username, addr[1], 'disconnected'))
+        conn.close()
+        break
 
-
+      if mess == '':
+        empty_message_count += 1
+        if empty_message_count >= 20:
+          try:
+            del self.clients[self.clients.index((conn, addr, username))]
+          except ValueError:
+            break
+          functions.writemess('[{}] {}: {}({}) {}'.format(functions.gettime(), 'Server', username, addr[1], 'disconnected'))
+          try:
+            conn.send('You have sended too many empty messages'.encode('utf-8'))
+          except OSError:
+            pass
+          conn.close()
+          break
+        continue
+      else:
+        empty_message_count = 0
+      if (conn, addr, username) in self.clients:
+        self.send_message_to_everybody(mess, addr[1], username)
+        functions.writemess('[{}] {}({}): {}'.format(functions.gettime(), username, addr[1], mess))
 
   def entering(self, conn, addr):
     while True:
@@ -44,14 +98,10 @@ class TCPServer:
       else:
         break
     self.clients.append((conn, addr, username))
-    threading.Thread(target=self.receiving, args=(conn, addr, username), daemon=True)
+    threading.Thread(target=self.receiving, args=(conn, addr, username), daemon=True).start()
+    self.send_message_to_everybody('{}({}) connected'.format(username, addr[1]), 0, 'Server')
     functions.writemess('[{}] {}: {}({}) {}'.format(functions.gettime(), 'Server', username, addr[1], 'connected'))
-    while True:
-      time.sleep(5)
-      if (conn, addr, username) in self.clients:
-        continue
-      else:
-        break
+    
 
 
   def accepting(self):
@@ -71,40 +121,20 @@ class TCPServer:
     while True:
       try:
         command = input('>>> ')
-        if ''.join(command.split()) == '':
+        command = command.split()
+        if command[0] == '':
           continue
 
 
-        elif command == 'exit':
+        elif command[0] == 'exit':
           print('[!] Server stopped')
           functions.writemess('[{}] Server: server stopped.'.format(functions.gettime()))
-          self.send_message_to_everybody('server stopped.', 00000, 'Server')
+          self.send_message_to_everybody('server stopped.', 0, 'Server')
           break
 
 
-        elif command == 'kick':
-          if len(command)>1:
-            try:
-              address = int(adress)
-
-            except ValueError:
-              print('kick: address must be a number')
-              return 0
-
-            for i in self.clients:
-                if i[1][1] == address:
-                  i[0].send('Server: you was kicked'.encode('utf-8'))
-                  i[0].close()
-                  del self.clients[self.clients.index(i)]
-                  print('{} was kicked'.format(i[2]))
-                  functions.writemess('[{}] Server: {} ({}) was kicked'.format(functions.gettime(), i[2], i[1][1]))
-                  break
-
-            else:
-              print('kick: user not found')
-
-          else:
-            print('kick: Incorrect use. Specify the address. Type "showclients" to see connected users.')
+        elif command[0] == 'kick':
+          self.kick(command)
 
         else:
           commands.do_command(command, self.clients)
